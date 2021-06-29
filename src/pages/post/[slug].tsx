@@ -1,5 +1,6 @@
 import { GetStaticPaths, GetStaticProps } from 'next';
 import Head from 'next/head';
+import { useRouter } from 'next/router';
 
 import { FiCalendar, FiUser } from 'react-icons/fi';
 import { format } from 'date-fns'
@@ -34,6 +35,12 @@ interface PostProps {
 }
 
 export default function Post({ post }: PostProps) {
+  const router = useRouter();
+
+  if (router.isFallback) {
+    return <div>Carregando...</div>
+  }
+
   return (
     <>
       <Head>
@@ -87,6 +94,7 @@ console.log(postResponse);
   return {
     props: {
       data
-    }
+    },
+    revalidate: 60 * 30
   }
 };
