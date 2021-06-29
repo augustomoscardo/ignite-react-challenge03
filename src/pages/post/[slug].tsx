@@ -1,5 +1,11 @@
 import { GetStaticPaths, GetStaticProps } from 'next';
+import Head from 'next/head';
 
+import { FiCalendar, FiUser } from 'react-icons/fi';
+import { format } from 'date-fns'
+import ptBR from 'date-fns/locale/pt-BR'
+
+import Prismic from '@prismicio/client'
 import { getPrismicClient } from '../../services/prismic';
 
 import commonStyles from '../../styles/common.module.scss';
@@ -7,6 +13,7 @@ import styles from './post.module.scss';
 
 interface Post {
   first_publication_date: string | null;
+  last_publication_date: string | null;
   data: {
     title: string;
     banner: {
@@ -26,11 +33,16 @@ interface PostProps {
   post: Post;
 }
 
-export default function Post() {
+export default function Post({ post }: PostProps) {
   return (
     <>
-      <main>
-        <article>
+      <Head>
+        <title>spacetraveling</title>
+      </Head>
+
+      <main className={commonStyles.container}>
+        <img src="" alt="" />
+        <article className={styles.post}>
           
         </article>
       </main>
@@ -38,16 +50,43 @@ export default function Post() {
   )
 }
 
-// export const getStaticPaths = async () => {
-//   const prismic = getPrismicClient();
-//   const posts = await prismic.query(TODO);
+export const getStaticPaths: GetStaticPaths = async () => {
+  const prismic = getPrismicClient();
+  const posts = await prismic.query([
+    Prismic.Predicates.at('document.type', 'posts')
+  ]);
 
-//   // TODO
-// };
+  const paths = posts.results.map(post => ({
+    params: { slug: post.uid }
+  }))
 
-// export const getStaticProps = async context => {
-//   const prismic = getPrismicClient();
-//   const response = await prismic.getByUID(TODO);
+  return {
+    paths,
+    fallback: true,
+  }
+};
 
-//   // TODO
-// };
+export const getStaticProps: GetStaticProps = async ({params}) => {
+  const { uid } = params;
+
+  const prismic = getPrismicClient();
+  const postResponse = await prismic.getByUID('post', String(uid), {});
+console.log(postResponse);
+
+  const data = {
+    uid: postResponse.uid,
+    title: postResponse.data.title,
+    author: postResponse.data.author,
+    // banner: postResponse.data.banner,
+    // heading: postResponse.data.heading,
+    // body: postResponse.data.body,
+    first_publication_date: postResponse.first_publication_date,
+    last_publication_date: postResponse.last_publication_date
+  }
+
+  return {
+    props: {
+      data
+    }
+  }
+};

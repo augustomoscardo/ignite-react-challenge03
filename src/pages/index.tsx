@@ -20,7 +20,6 @@ interface Post {
   title: string;
   subtitle: string;
   author: string;
-  next_page: string;
 }
 
 interface HomeProps {
@@ -34,15 +33,30 @@ interface HomeProps {
 //   postsPagination: PostPagination;
 // }
 
-const prismic = getPrismicClient();
-
 export default function Home({ data }: HomeProps) {
-  const [posts, setPost] = useState<Post[]>(data.results);
+  const formattedPosts = data.results.map(post => {
+    return {
+      ...post,
+      first_publication_date: format(
+        new Date(post.first_publication_date),
+        "dd MMM yyyy",
+        {
+          locale: ptBR,
+        }
+      )
+    }
+  });
+
+  const [posts, setPosts] = useState<Post[]>(formattedPosts);
   const [currentPage, setCurrentPage] = useState(1);
   const [nextPage, setNextPage] = useState(data.next_page);
 
-  async function handleNextPage() {
-    const postResult = await fetch(`${nextPage}`)
+  async function handleNextPage(): Promise<void> {
+    if (currentPage !== 1 && nextPage === null) {
+      return;
+    }
+
+    const postResult = await fetch(nextPage)
     .then(response => response.json());
   
     setNextPage(postResult.next_page);
@@ -65,7 +79,7 @@ export default function Home({ data }: HomeProps) {
     })
     console.log(newPosts);
 
-    setPost([
+    setPosts([
       ...posts, ...newPosts
     ])
   }
@@ -76,7 +90,7 @@ export default function Home({ data }: HomeProps) {
         <title>spacetraveling</title>
       </Head>
 
-      <main className={styles.container}>  
+      <main className={commonStyles.container}>  
         <div className={styles.posts}>
           {data.results.map(post => (
             <Link href={`/post/${post.uid}`} key={post.uid}>
@@ -84,17 +98,19 @@ export default function Home({ data }: HomeProps) {
                 <h1>{post.title}</h1>
                 <span>{post.subtitle}</span>
                 <div className={styles.footer}>
-                    <FiCalendar className={styles.calendar} />
+                    <FiCalendar size={20} />
                     <time>{post.first_publication_date}</time>
   
-                    <FiUser className={styles.hero}/>
+                    <FiUser size={20} />
                     <p>{post.author}</p>
                 </div>
               </a>
             </Link>
           ))}
 
-          <button type="button" onClick={handleNextPage}>Carregar mais posts</button>
+          {nextPage && (
+            <button type="button" onClick={handleNextPage}>Carregar mais posts</button>
+          )}
         </div>
       </main>
     </>
@@ -102,7 +118,7 @@ export default function Home({ data }: HomeProps) {
 }
 
 export const getStaticProps: GetStaticProps = async () => {
-  // const prismic = getPrismicClient();
+  const prismic = getPrismicClient();
   const postsResponse = await prismic.query([
     Prismic.Predicates.at('document.type', 'posts')
   ], {

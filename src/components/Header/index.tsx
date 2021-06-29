@@ -1,4 +1,3 @@
-
 import Link from 'next/link'
 import styles from './header.module.scss'
 
@@ -9,7 +8,7 @@ export function Header() {
       <div className={styles.headerContent}>
         <Link href="/">
           <a>
-            <img src="/images/logo.svg" alt="Logo spacetraveling" />
+            <img src="/images/logo.svg" alt="logo" />
           </a>
         </Link>
       </div>
