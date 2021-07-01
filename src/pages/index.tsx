@@ -5,11 +5,11 @@ import Head from 'next/head';
 import Link from 'next/link'
 
 import { FiCalendar, FiUser } from 'react-icons/fi';
-import { format } from 'date-fns'
-import ptBR from 'date-fns/locale/pt-BR'
 
 import Prismic from '@prismicio/client'
 import { getPrismicClient } from '../services/prismic';
+
+import { formatDate } from '../utils'
 
 import commonStyles from '../styles/common.module.scss';
 import styles from './home.module.scss';
@@ -29,25 +29,15 @@ interface HomeProps {
   };
 }
 
-// interface HomeProps {
-//   postsPagination: PostPagination;
-// }
-
 export default function Home({ data }: HomeProps) {
-  const formattedPosts = data.results.map(post => {
+  const formatPostDate = data.results.map(post => {
     return {
       ...post,
-      first_publication_date: format(
-        new Date(post.first_publication_date),
-        "dd MMM yyyy",
-        {
-          locale: ptBR,
-        }
-      )
+      first_publication_date: formatDate(post.first_publication_date)
     }
   });
 
-  const [posts, setPosts] = useState<Post[]>(formattedPosts);
+  const [posts, setPosts] = useState<Post[]>(formatPostDate);
   const [currentPage, setCurrentPage] = useState(1);
   const [nextPage, setNextPage] = useState(data.next_page);
 
@@ -62,19 +52,13 @@ export default function Home({ data }: HomeProps) {
     setNextPage(postResult.next_page);
     setCurrentPage(postResult.page);
 
-    const newPosts = postResult.results.map(post => {
+    const newPosts = postResult.results.map((post: any) => {
       return {
         uid: post.uid,
         title: post.data.title,
         subtitle: post.data.subtitle,
         author: post.data.author,
-        first_publication_date: format(
-          new Date(post.first_publication_date),
-          "dd MMM yyyy",
-          {
-            locale: ptBR,
-          }
-        ),
+        first_publication_date: formatDate(post.first_publication_date),
       }
     })
     console.log(newPosts);
@@ -92,7 +76,7 @@ export default function Home({ data }: HomeProps) {
 
       <main className={commonStyles.container}>  
         <div className={styles.posts}>
-          {data.results.map(post => (
+          {posts.map(post => (
             <Link href={`/post/${post.uid}`} key={post.uid}>
               <a className={styles.post}>
                 <h1>{post.title}</h1>
@@ -134,12 +118,12 @@ export const getStaticProps: GetStaticProps = async () => {
         title: post.data.title,
         subtitle: post.data.subtitle,
         author: post.data.author,
-        first_publication_date: post.first_publication_date 
+        first_publication_date: post.first_publication_date
       }
     }),
     next_page: postsResponse.next_page,
   }
-  
+
   return {
     props: {
       data,
