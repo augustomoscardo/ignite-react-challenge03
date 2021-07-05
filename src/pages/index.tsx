@@ -6,10 +6,11 @@ import Link from 'next/link'
 
 import { FiCalendar, FiUser } from 'react-icons/fi';
 
+import { format } from 'date-fns'
+import ptBR from 'date-fns/locale/pt-BR'
+
 import Prismic from '@prismicio/client'
 import { getPrismicClient } from '../services/prismic';
-
-import { formatDate } from '../utils'
 
 import commonStyles from '../styles/common.module.scss';
 import styles from './home.module.scss';
@@ -17,61 +18,58 @@ import styles from './home.module.scss';
 interface Post {
   uid?: string;
   first_publication_date: string | null;
-  title: string;
-  subtitle: string;
-  author: string;
-}
-
-interface HomeProps {
   data: {
-    results: Post[];
-    next_page: string
+    title: string;
+    subtitle: string;
+    author: string;
   };
 }
 
-export default function Home({ data }: HomeProps) {
-  const formatPostDate = data.results.map(post => {
-    return {
-      ...post,
-      first_publication_date: formatDate(post.first_publication_date)
-    }
-  });
+interface PostPagination {
+  next_page: string;
+  results: Post[];
+}
 
-  const [posts, setPosts] = useState<Post[]>(formatPostDate);
+interface HomeProps {
+  postsPagination: PostPagination;
+}
+
+export default function Home({ postsPagination }: HomeProps) {
+
+  const [posts, setPosts] = useState<Post[]>(postsPagination.results);
   const [currentPage, setCurrentPage] = useState(1);
-  const [nextPage, setNextPage] = useState(data.next_page);
+  const [nextPage, setNextPage] = useState(postsPagination.next_page);
 
-  async function handleNextPage(): Promise<void> {
+  async function handleNewPosts(): Promise<void> {
     if (currentPage !== 1 && nextPage === null) {
       return;
     }
 
-    const postResult = await fetch(nextPage)
-    .then(response => response.json());
-  
-    setNextPage(postResult.next_page);
-    setCurrentPage(postResult.page);
+    const postsResult = await fetch(nextPage).then(response => response.json());
 
-    const newPosts = postResult.results.map((post: any) => {
+    setNextPage(postsResult.next_page);
+    setCurrentPage(postsResult.page);
+
+    const newPosts = postsResult.results.map((post: Post) => {
       return {
         uid: post.uid,
-        title: post.data.title,
-        subtitle: post.data.subtitle,
-        author: post.data.author,
-        first_publication_date: formatDate(post.first_publication_date),
+        first_publication_date: post.first_publication_date,
+        data: {
+          title: post.data.title,
+          subtitle: post.data.subtitle,
+          author: post.data.author,
+        },
       }
     })
     console.log(newPosts);
 
-    setPosts([
-      ...posts, ...newPosts
-    ])
+    setPosts([...posts, ...newPosts]);
   }
 
   return (
     <>
       <Head>
-        <title>spacetraveling</title>
+        <title>spacetraveling | Home</title>
       </Head>
 
       <main className={commonStyles.container}>  
@@ -79,21 +77,26 @@ export default function Home({ data }: HomeProps) {
           {posts.map(post => (
             <Link href={`/post/${post.uid}`} key={post.uid}>
               <a className={styles.post}>
-                <h1>{post.title}</h1>
-                <span>{post.subtitle}</span>
+                <h1>{post.data.title}</h1>
+                <span>{post.data.subtitle}</span>
                 <div className={styles.footer}>
                     <FiCalendar size={20} />
-                    <time>{post.first_publication_date}</time>
+                    <time>{format(
+                      new Date(post.first_publication_date),
+                      'dd MMM yyyy', {
+                      locale: ptBR,
+                      })}
+                    </time>
   
                     <FiUser size={20} />
-                    <p>{post.author}</p>
+                    <p>{post.data.author}</p>
                 </div>
               </a>
             </Link>
           ))}
 
           {nextPage && (
-            <button type="button" onClick={handleNextPage}>Carregar mais posts</button>
+            <button type="button" onClick={handleNewPosts}>Carregar mais posts</button>
           )}
         </div>
       </main>
@@ -103,6 +106,7 @@ export default function Home({ data }: HomeProps) {
 
 export const getStaticProps: GetStaticProps = async () => {
   const prismic = getPrismicClient();
+
   const postsResponse = await prismic.query([
     Prismic.Predicates.at('document.type', 'posts')
   ], {
@@ -110,23 +114,26 @@ export const getStaticProps: GetStaticProps = async () => {
     pageSize: 2,
   });
 
-  const data = {
-    ...postsResponse,
-    results: postsResponse.results.map(post => {
-      return {
-        uid: post.uid,
+  const posts = postsResponse.results.map(post => {
+    return {
+      uid: post.uid,
+      first_publication_date: post.first_publication_date,
+      data: {
         title: post.data.title,
         subtitle: post.data.subtitle,
         author: post.data.author,
-        first_publication_date: post.first_publication_date
-      }
-    }),
+      },
+    };
+  });
+
+  const postsPagination = {
+    results: posts,
     next_page: postsResponse.next_page,
-  }
+  };
 
   return {
     props: {
-      data,
+      postsPagination,
       revalidate: 60 * 60 * 24,  // 24 hours
     }
   }

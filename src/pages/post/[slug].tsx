@@ -8,14 +8,14 @@ import Prismic from '@prismicio/client'
 import { getPrismicClient } from '../../services/prismic';
 import { RichText } from 'prismic-dom';
 
-import { formatDate } from '../../utils'
+import { format } from 'date-fns'
+import ptBR from 'date-fns/locale/pt-BR'
 
 import commonStyles from '../../styles/common.module.scss';
 import styles from './post.module.scss';
 
 interface Post {
   first_publication_date: string | null;
-  last_publication_date: string | null;
   data: {
     title: string;
     banner: {
@@ -58,25 +58,29 @@ export default function Post({ post }: PostProps) {
 
   if (router.isFallback) {
 
-    return <div>Carregando...</div>
+    return <div>Carregando...</div>;
   }
 
   return (
     <>
       <Head>
-        <title>spacetraveling</title>
+        <title>spacetraveling | {post.data.title}</title>
       </Head>
 
       <img src={post.data.banner.url} alt="banner" className={styles.banner} />
 
       <main className={commonStyles.container}>
-        <article className={styles.post}>
+        <div className={styles.post}>
           <div className={styles.header}>
             <h1>{post.data.title}</h1>
             <div className={styles.postInfo}>
               <div>
                 <FiCalendar size={20} />
-                <p>{formatDate(post.first_publication_date)}</p>
+                <p>{format(
+                  new Date(post.first_publication_date),
+                  'dd MMM yyyy', {
+                  locale: ptBR,
+                })}</p>
               </div>
 
               <div>
@@ -90,19 +94,28 @@ export default function Post({ post }: PostProps) {
               </div>
             </div>
           </div>
-            {post.data.content.map(content => (
-              <div className={styles.postContent} key={content.heading}>
+            {post.data.content.map(({heading, body}) => (
+              <article className={styles.postContent} key={heading}>
+                <h2>{heading}</h2>
+
+                <div dangerouslySetInnerHTML={{__html: RichText.asHtml(body)}} />
+              </article>              
+            ))}
+
+
+            {/* {post.data.content.map(content => (
+              <article className={styles.postContent} key={content.heading}>
               
                 <h2>{content.heading}</h2>
                 
                 {content.body.map(body => (
 
-                <div dangerouslySetInnerHTML={{ __html: RichText.asText(body.text) }} key={body.text} />
+                <div dangerouslySetInnerHTML={{ __html: body.text }} key={body.text} />
                 ))}               
               
-              </div>
-            ))}
-        </article>
+              </article>
+            ))} */}
+        </div>
       </main>
     </>
   )
@@ -110,6 +123,7 @@ export default function Post({ post }: PostProps) {
 
 export const getStaticPaths: GetStaticPaths = async () => {
   const prismic = getPrismicClient();
+
   const posts = await prismic.query([
     Prismic.Predicates.at('document.type', 'posts')
   ]);
@@ -124,7 +138,7 @@ export const getStaticPaths: GetStaticPaths = async () => {
   }
 };
 
-export const getStaticProps: GetStaticProps = async ({params}) => {
+export const getStaticProps: GetStaticProps = async ({ params }) => {
   const { slug } = params;
 
   const prismic = getPrismicClient();
@@ -133,7 +147,6 @@ export const getStaticProps: GetStaticProps = async ({params}) => {
   const post = {
     uid: postResponse.uid,
     first_publication_date: postResponse.first_publication_date,
-    last_publication_date: postResponse.last_publication_date,
     data: {
       title: postResponse.data.title,
       author: postResponse.data.author,
@@ -154,6 +167,6 @@ export const getStaticProps: GetStaticProps = async ({params}) => {
     props: {
       post
     },
-    revalidate: 60 * 30
+    revalidate: 60 * 30  // 30 min
   }
 };

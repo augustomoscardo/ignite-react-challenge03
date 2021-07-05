@@ -46,18 +46,21 @@
   }
 
   .postContent {
-    
+    text-align: justify;
 
     h2 {
       color: var(--heading);
       font-size: 2rem;
-      margin-bottom: 4.125rem;
 
+      margin: 4rem 0;
     }
 
-    div {
+    p {
       color: var(--body);
       font-size: 1.125rem;
+      line-height: 1.5rem;
+
+      margin: 1.5rem 0;
     }
   }
 }
