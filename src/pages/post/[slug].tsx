@@ -149,6 +149,7 @@ export const getStaticProps: GetStaticProps = async ({ params }) => {
     first_publication_date: postResponse.first_publication_date,
     data: {
       title: postResponse.data.title,
+      subtitle: postResponse.data.subtitle,
       author: postResponse.data.author,
       banner: {
         url: postResponse.data.banner.url,
