@@ -13,9 +13,14 @@ import ptBR from 'date-fns/locale/pt-BR'
 
 import commonStyles from '../../styles/common.module.scss';
 import styles from './post.module.scss';
+import Link from 'next/link';
+import Comments from '../../components/Comments';
+import { ExitPreviewButton } from '../../components/ExitPreviewButton';
 
 interface Post {
+  uid?: string;
   first_publication_date: string | null;
+  last_publication_date: string | null;
   data: {
     title: string;
     banner: {
@@ -33,14 +38,12 @@ interface Post {
 
 interface PostProps {
   post: Post;
+  preview: boolean;
+  prevPost: Post;
+  nextPost:Post;
 }
 
-export default function Post({ post }: PostProps) {
-  // const postBody = post.data.content.map(content => content.body.map(body => body.text))
-  //   console.log(postBody);
-    
-  // // const bodyText = postBody.map(item => item)
-
+export default function Post({ post, preview, prevPost, nextPost }: PostProps) {
   const words = post.data.content.map(contentItem => {
     
     return {
@@ -50,6 +53,7 @@ export default function Post({ post }: PostProps) {
       }).reduce((acc, current) => acc += current)
     }
   })
+
   const totalWords =  words.map(item => item.wordsInHeading + item.wordsInBody)
     .reduce((acc, current) => acc + current)
   const readTime = Math.ceil(totalWords / 200);
@@ -57,7 +61,6 @@ export default function Post({ post }: PostProps) {
   const router = useRouter();
 
   if (router.isFallback) {
-
     return <div>Carregando...</div>;
   }
 
@@ -76,11 +79,13 @@ export default function Post({ post }: PostProps) {
             <div className={styles.postInfo}>
               <div>
                 <FiCalendar size={20} />
-                <p>{format(
-                  new Date(post.first_publication_date),
-                  'dd MMM yyyy', {
-                  locale: ptBR,
-                })}</p>
+                <p>
+                  {format(
+                    new Date(post.first_publication_date),
+                    'dd MMM yyyy', {
+                    locale: ptBR,
+                  })}
+                </p>
               </div>
 
               <div>
@@ -93,7 +98,13 @@ export default function Post({ post }: PostProps) {
                 <p>{readTime} min</p>
               </div>
             </div>
-          </div>
+
+            <div className={styles.postEdit}>
+              <p>
+                {format(new Date(post.last_publication_date), "'* editado em 'dd MMM yyyy', às 'H:m'", {locale: ptBR})}
+              </p>
+            </div>
+
             {post.data.content.map(({heading, body}) => (
               <article className={styles.postContent} key={heading}>
                 <h2>{heading}</h2>
@@ -101,21 +112,50 @@ export default function Post({ post }: PostProps) {
                 <div dangerouslySetInnerHTML={{__html: RichText.asHtml(body)}} />
               </article>              
             ))}
+          </div>
 
-
-            {/* {post.data.content.map(content => (
-              <article className={styles.postContent} key={content.heading}>
-              
-                <h2>{content.heading}</h2>
-                
-                {content.body.map(body => (
-
-                <div dangerouslySetInnerHTML={{ __html: body.text }} key={body.text} />
-                ))}               
-              
-              </article>
-            ))} */}
+          <hr />
         </div>
+        
+        <section className={styles.otherPosts}>
+          {prevPost && (
+            <div>
+              <p>{prevPost.data.title}</p>
+              <Link href={`/post/${prevPost.uid}`}>
+                <a>Post anterior</a>
+              </Link>
+            </div>
+          )}
+
+          {nextPost && (
+            <div>
+              <p>Como utilizar Hooks</p>
+              <Link href={`/post/${post.uid}`}>
+                <a>Próximo Post</a>
+              </Link>
+            </div>
+          )}
+
+          {/* <div>
+            <p>Como utilizar Hooks</p>
+            <Link href={`/post/${post.uid}`}>
+              <a>Próximo Post</a>
+            </Link>
+          </div> */}
+        </section>
+
+        <section className={styles.commentsContainer}>
+          <p></p>
+
+          <div>
+            <Comments />
+          </div>
+        </section>
+
+        {preview && (
+          <ExitPreviewButton />
+        )}
+
       </main>
     </>
   )
@@ -138,15 +178,37 @@ export const getStaticPaths: GetStaticPaths = async () => {
   }
 };
 
-export const getStaticProps: GetStaticProps = async ({ params }) => {
+export const getStaticProps: GetStaticProps = async ({ params, preview = false }) => {
   const { slug } = params;
 
   const prismic = getPrismicClient();
   const postResponse = await prismic.getByUID('posts', String(slug), {});
 
+  const previousPostResponse = await prismic.query([
+    Prismic.Predicates.at('document.type', 'posts')
+  ], {
+    pageSize: 1,
+    orderings: '[document.first_publication_date]',
+    after: postResponse.id
+  })
+
+  const nextPostResponse = await prismic.query([
+    Prismic.Predicates.at('document.type', 'post')
+  ], {
+    pageSize: 1,
+    orderings: '[document.first_publication_date desc]',
+    after: postResponse.id
+  })
+  
+  const prevPost = previousPostResponse.results[0] || null
+  const nextPost = nextPostResponse.results[0] || null
+
+  console.log(nextPost);
+
   const post = {
     uid: postResponse.uid,
     first_publication_date: postResponse.first_publication_date,
+    last_publication_date: postResponse.last_publication_date,
     data: {
       title: postResponse.data.title,
       subtitle: postResponse.data.subtitle,
@@ -161,13 +223,15 @@ export const getStaticProps: GetStaticProps = async ({ params }) => {
         }
       })
     }
-    
   }
 
   return {
     props: {
-      post
+      post,
+      prevPost,
+      nextPost,
+      preview,
     },
-    revalidate: 60 * 30  // 30 min
+    revalidate: 60 * 60,  // 1h
   }
 };

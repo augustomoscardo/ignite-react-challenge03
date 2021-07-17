@@ -14,6 +14,7 @@ import { getPrismicClient } from '../services/prismic';
 
 import commonStyles from '../styles/common.module.scss';
 import styles from './home.module.scss';
+import { ExitPreviewButton } from '../components/ExitPreviewButton';
 
 interface Post {
   uid?: string;
@@ -32,9 +33,10 @@ interface PostPagination {
 
 interface HomeProps {
   postsPagination: PostPagination;
+  preview: boolean;
 }
 
-export default function Home({ postsPagination }: HomeProps) {
+export default function Home({ postsPagination, preview }: HomeProps) {
 
   const [posts, setPosts] = useState<Post[]>(postsPagination.results);
   const [currentPage, setCurrentPage] = useState(1);
@@ -61,10 +63,10 @@ export default function Home({ postsPagination }: HomeProps) {
         },
       }
     })
-    console.log(newPosts);
 
     setPosts([...posts, ...newPosts]);
   }
+console.log(preview);
 
   return (
     <>
@@ -96,7 +98,13 @@ export default function Home({ postsPagination }: HomeProps) {
           ))}
 
           {nextPage && (
-            <button type="button" onClick={handleNewPosts}>Carregar mais posts</button>
+            <button type="button" onClick={handleNewPosts}>
+              Carregar mais posts
+            </button>
+          )}
+
+          {preview && (
+            <ExitPreviewButton />
           )}
         </div>
       </main>
@@ -104,7 +112,7 @@ export default function Home({ postsPagination }: HomeProps) {
   )
 }
 
-export const getStaticProps: GetStaticProps = async () => {
+export const getStaticProps: GetStaticProps<HomeProps> = async ({preview = false, previewData}) => {
   const prismic = getPrismicClient();
 
   const postsResponse = await prismic.query([
@@ -112,6 +120,8 @@ export const getStaticProps: GetStaticProps = async () => {
   ], {
     fetch: ['posts.title', 'posts.subtitle', 'posts.author'],
     pageSize: 2,
+    orderings: '[document.first_publication_date desc]',
+    ref: previewData?.ref ?? null
   });
 
   const posts = postsResponse.results.map(post => {
@@ -135,6 +145,7 @@ export const getStaticProps: GetStaticProps = async () => {
     props: {
       postsPagination,
       revalidate: 60 * 60 * 24,  // 24 hours
-    }
+      preview
+    },
   }
 };

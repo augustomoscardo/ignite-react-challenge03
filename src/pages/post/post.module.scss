@@ -26,7 +26,6 @@
 
     color: var(--info);
 
-    margin-bottom: 4.125rem;
 
     div {
       display: flex;
@@ -41,8 +40,17 @@
     }
   }
 
+  .postEdit {
+    color: var(--info);
+    font-style: italic;
+
+    margin-top: 1.125rem;
+  }
+
   .postContent {
     text-align: justify;
+
+    
 
     h2 {
       color: var(--heading);
@@ -58,5 +66,39 @@
 
       margin: 1.5rem 0;
     }
+
+    div:nth-last-child(n) {
+      margin-bottom: 3.75rem;
+    }
   }
+}
+
+.otherPosts {
+  max-width: 720px;
+  margin: 0 auto;
+
+  display: flex;
+  justify-content: space-between;
+
+  margin-top: 3rem;
+
+  div {
+    p {
+      color: var(--heading);
+      font-size: 1.125rem;
+      margin-bottom: 0.5rem;
+    }
+  
+    a {
+      color: #FF57B2;
+      font-weight: bold;
+      font-size: 1rem;
+    }
+  }
+}
+
+.commentsContainer {
+  max-width: 720px;
+  margin: 0 auto;
+  margin-top: 5rem;
 }
