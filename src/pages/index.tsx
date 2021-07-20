@@ -66,7 +66,6 @@ export default function Home({ postsPagination, preview }: HomeProps) {
 
     setPosts([...posts, ...newPosts]);
   }
-console.log(preview);
 
   return (
     <>
