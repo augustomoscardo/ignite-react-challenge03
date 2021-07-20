@@ -64,6 +64,18 @@ export default function Post({ post, preview, prevPost, nextPost }: PostProps) {
     return <div>Carregando...</div>;
   }
 
+  const isPostEdited = post.first_publication_date !== post.last_publication_date;
+
+  let postEdited;
+
+  if (isPostEdited) {
+    postEdited = format(new Date(post.last_publication_date), "'* editado em 'dd MMM yyyy', às 'H:m'", {locale: ptBR});
+  }
+
+  const otherPostsClasses = prevPost ? 
+    styles.otherPosts : 
+    `${styles.otherPosts} ${styles.nextPost}` // lógica para quando houver somente o "próx post" renderizar à direita da pág.
+
   return (
     <>
       <Head>
@@ -99,11 +111,13 @@ export default function Post({ post, preview, prevPost, nextPost }: PostProps) {
               </div>
             </div>
 
-            <div className={styles.postEdit}>
-              <p>
-                {format(new Date(post.last_publication_date), "'* editado em 'dd MMM yyyy', às 'H:m'", {locale: ptBR})}
-              </p>
-            </div>
+            {isPostEdited && 
+              <div className={styles.postEdit}>
+                <p>
+                  {postEdited}
+                </p>
+              </div>
+            }
 
             {post.data.content.map(({heading, body}) => (
               <article className={styles.postContent} key={heading}>
@@ -114,12 +128,11 @@ export default function Post({ post, preview, prevPost, nextPost }: PostProps) {
             ))}
           </div>
 
-          <hr />
         </div>
         
-        <section className={styles.otherPosts}>
+        <section className={otherPostsClasses}>
           {prevPost && (
-            <div>
+            <div className={styles.previousPost}>
               <p>{prevPost.data.title}</p>
               <Link href={`/post/${prevPost.uid}`}>
                 <a>Post anterior</a>
@@ -128,25 +141,16 @@ export default function Post({ post, preview, prevPost, nextPost }: PostProps) {
           )}
 
           {nextPost && (
-            <div>
-              <p>Como utilizar Hooks</p>
-              <Link href={`/post/${post.uid}`}>
+            <div >
+              <p>{nextPost.data.title}</p>
+              <Link href={`/post/${nextPost.uid}`}>
                 <a>Próximo Post</a>
               </Link>
             </div>
           )}
-
-          {/* <div>
-            <p>Como utilizar Hooks</p>
-            <Link href={`/post/${post.uid}`}>
-              <a>Próximo Post</a>
-            </Link>
-          </div> */}
         </section>
 
         <section className={styles.commentsContainer}>
-          <p></p>
-
           <div>
             <Comments />
           </div>
@@ -193,7 +197,7 @@ export const getStaticProps: GetStaticProps = async ({ params, preview = false }
   })
 
   const nextPostResponse = await prismic.query([
-    Prismic.Predicates.at('document.type', 'post')
+    Prismic.Predicates.at('document.type', 'posts')
   ], {
     pageSize: 1,
     orderings: '[document.first_publication_date desc]',
@@ -202,8 +206,6 @@ export const getStaticProps: GetStaticProps = async ({ params, preview = false }
   
   const prevPost = previousPostResponse.results[0] || null
   const nextPost = nextPostResponse.results[0] || null
-
-  console.log(nextPost);
 
   const post = {
     uid: postResponse.uid,
